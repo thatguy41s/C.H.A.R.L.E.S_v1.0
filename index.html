@@ -2,98 +2,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CHARLES // V73 SECURE</title>
-    <style>
-        :root { --accent: #ff003c; --bg: #050505; }
-        body { margin: 0; background: var(--bg); color: #ccc; font-family: monospace; display: flex; height: 100vh; overflow: hidden; }
-        #sidebar { width: 250px; background: #000; border-right: 1px solid #222; padding: 20px; display: flex; flex-direction: column; }
-        #chat-area { flex: 1; display: flex; flex-direction: column; }
-        #messages { flex: 1; overflow-y: auto; padding: 20px; }
-        .msg { margin-bottom: 15px; padding: 10px; border-left: 3px solid var(--accent); background: #111; }
-        #input-box { padding: 20px; background: #000; border-top: 1px solid #222; }
-        input { width: 100%; background: #111; border: 1px solid #333; color: white; padding: 10px; outline: none; }
-        #auth-gate { position: fixed; inset: 0; background: black; z-index: 100; display: flex; justify-content: center; align-items: center; }
-    </style>
-</head>
+    <title>CHARLES // SECURE_CORE v73</title>
+    </head>
 <body>
-
-<div id="auth-gate">
-    <input type="password" id="pass" placeholder="ENTER CODE" style="width:200px; text-align:center;">
-</div>
-
-<div id="sidebar">
-    <h2 style="color:var(--accent)">CHARLES</h2>
-    <div id="admin-tools" style="display:none; margin-top:20px;">
-        <button onclick="broadcast()" style="width:100%; cursor:pointer;">BROADCAST</button>
-    </div>
-</div>
-
-<div id="chat-area">
-    <div id="messages"></div>
-    <div id="input-box">
-        <input type="text" id="userInput" placeholder="Ask Charles something...">
-    </div>
-</div>
-
-<script>
+    <script>
     let isAdmin = false;
 
-    // --- SECURITY GATE ---
-    document.getElementById('pass').addEventListener('keypress', (e) => {
-        if(e.key === 'Enter') {
-            if(e.target.value === "3105") { isAdmin = true; unlock(); }
-            else if(e.target.value === "1939") { isAdmin = false; unlock(); }
-        }
-    });
-
-    function unlock() {
-        document.getElementById('auth-gate').style.display = 'none';
-        if(isAdmin) document.getElementById('admin-tools').style.display = 'block';
-        addMsg("Charles is awake. Proceed with caution.", "ai");
-    }
-
-    // --- THE BRAIN CALL ---
-    async function talkToCharles(text) {
+    // --- NEW SECURE CHAT LOGIC ---
+    async function askCharles(userText) {
         try {
-            const res = await fetch("/.netlify/functions/charles", {
+            const response = await fetch("/.netlify/functions/charles", {
                 method: "POST",
-                body: JSON.stringify({ message: text, isAdmin: isAdmin })
+                body: JSON.stringify({ 
+                    message: userText, 
+                    isAdmin: isAdmin 
+                })
             });
-            const data = await res.json();
+            const data = await response.json();
             return data.reply;
-        } catch { return "Back-end error. Check your Netlify logs."; }
+        } catch (e) {
+            return "My connection to the back office is severed. Fix it, JOse.";
+        }
     }
 
-    function addMsg(text, role) {
-        const div = document.createElement('div');
-        div.className = 'msg';
-        div.innerHTML = `<b>${role.toUpperCase()}:</b> ${text}`;
-        document.getElementById('messages').appendChild(div);
-        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-    }
-
+    // --- INPUT HANDLER ---
     document.getElementById('userInput').addEventListener('keypress', async (e) => {
         if(e.key === 'Enter' && e.target.value) {
             const val = e.target.value;
-            addMsg(val, "user");
-            e.target.value = "";
+            addMsg(val, 'user');
+            e.target.value = '';
 
-            // GUEST TRAP
-            if(val.toLowerCase().includes("rewrite") && !isAdmin) {
-                addMsg("Attempting a rewrite? Access revoked.", "ai");
-                setTimeout(() => { document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:20%;'>BANNED</h1>"; }, 1500);
+            // Guest Trap (Rewrite check)
+            if (val.toLowerCase().includes("rewrite") && !isAdmin) {
+                addMsg("Unauthorized. Goodbye.", "ai");
+                setTimeout(() => { document.body.innerHTML = "<h1>LOCKED</h1>"; }, 2000);
                 return;
             }
 
-            const reply = await talkToCharles(val);
-            addMsg(reply, "ai");
+            // Call the secure function
+            const reply = await askCharles(val);
+            addMsg(reply, 'ai');
         }
     });
 
-    function broadcast() {
-        const m = prompt("Global message:");
-        if(m) addMsg(`*Global Broadcast:* ${m}`, "ai");
-    }
+    // [Rest of launch/admin logic from v72]
 </script>
 </body>
 </html>
