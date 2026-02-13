@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHARLES // OMNI_CORE MASTER</title>
+    <style id="mutation-style">
+        :root { 
+            --accent: #00e5ff; --bg: #030305; --panel: rgba(15, 15, 25, 0.9); 
+            --border: rgba(0, 229, 255, 0.2); --gradient: linear-gradient(45deg, #00e5ff, #7000ff);
+            --venom: #ff0055; --chat-width: 800px; --font-size: 16px;
+        }
+        * { box-sizing: border-box; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Inter', 'Courier New', monospace; background: var(--bg); color: white; overflow: hidden; }
+        
+        /* THE SHAKE EFFECT (SKIBIDI PROTOCOL) */
+        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+        .shaking { animation: shake 0.15s infinite; }
+
+        /* DESTRUCT OVERLAY */
+        #destruct-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 20000; padding: 50px; color: #0f0; font-family: 'Courier New'; overflow: hidden; }
+        .fail-text { color: var(--venom); font-weight: bold; font-size: 40px; text-align: center; margin-top: 20%; text-shadow: 0 0 20px var(--venom); }
+
+        /* UI ELEMENTS */
+        .glitch-text { color: var(--venom); text-shadow: 2px 0 #00e5ff; animation: glitch 0.2s infinite; font-weight: bold; }
+        @keyframes glitch { 0% { transform: translate(0); } 50% { transform: translate(-1px, 1px); } 100% { transform: translate(0); } }
+        
+        #app-container { display: none; height: 100vh; width: 100vw; flex-direction: row; }
+        #sidebar { width: 320px; background: rgba(0,0,0,0.95); backdrop-filter: blur(30px); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; z-index: 10; }
+        #chat-window { flex: 1; overflow-y: auto; padding: 40px 0; scroll-behavior: smooth; }
+        .row { width: 100%; padding: 12px 0; display: flex; justify-content: center; }
+        .msg-content { width: 100%; max-width: var(--chat-width); display: flex; gap: 20px; padding: 22px; background: var(--panel); border-radius: 18px; border: 1px solid var(--border); backdrop-filter: blur(15px); font-size: var(--font-size); }
+        #input-zone { padding: 30px; display: flex; justify-content: center; position: relative; }
+        .input-pill { width: 100%; max-width: var(--chat-width); background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 20px; display: flex; padding: 20px; }
+        input#userInput { flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 17px; }
+        .creator-highlight { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; }
+    </style>
+</head>
+<body id="core-body">
+
+<div id="destruct-overlay">
+    <div id="term-lines"></div>
+    <div class="fail-text" id="fail-msg">CRITICAL SYSTEM FAILURE</div>
+</div>
+
+<div id="auth-gate" style="position:fixed; inset:0; background:#000; z-index:10000; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+    <div style="font-size: 10px; letter-spacing: 4px; color: var(--accent); margin-bottom: 20px;">CHARLES // OMNI_CORE</div>
+    <input type="password" id="pass-in" placeholder="••••" autocomplete="off" style="background:transparent; border:none; border-bottom:2px solid #222; color:var(--accent); font-size:42px; text-align:center; outline:none; width:300px; letter-spacing:8px;">
+    <div id="creator-verify" style="display:none; margin-top:20px;"><input type="text" id="name-confirm" placeholder="IDENTITY" style="background:transparent; border:none; border-bottom:2px solid var(--accent); color:white; text-align:center; outline:none; font-size:20px;"></div>
+</div>
+
+<div id="app-container">
+    <div id="sidebar">
+        <div id="neural-node" style="width:60px; height:60px; background:var(--accent); border-radius:50%; margin:0 auto; box-shadow: 0 0 20px var(--accent);"></div>
+        <div style="flex:1; margin-top:30px; border-top:1px solid #222; overflow-y:auto; font-size:10px; color:#555; padding-top:15px;">
+            SENTRY_LOGS
+            <div id="shame-list"></div>
+            <div id="victim-list" style="margin-top:20px; display:none; color:var(--accent);"></div>
+        </div>
+        <div style="margin-top:auto; padding-top:20px; border-top:1px solid #111;">
+            <div style="font-size:11px; color:#333;">ARCHITECT: <span class="creator-highlight">JOse</span></div>
+        </div>
+    </div>
+    <div id="main-chat" style="flex:1; display:flex; flex-direction:column;">
+        <div id="chat-window"></div>
+        <div id="input-zone">
+            <div id="lockdown-status" style="display:none; position:absolute; color:var(--venom); top:5px; font-size:10px; font-weight:bold;">LOCKDOWN ACTIVE</div>
+            <div class="input-pill"><input type="text" id="userInput" placeholder="Awaiting directive..." autocomplete="off"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // System Keys & Persistence
+    const _L1 = "OWM5Zjc2OTItM1FrMTdrTGg0SHk0SDNqUlp2RzVJLTE0OTAxMjFkZmM0YjNiN20tc2stdmR5";
+    const KEY = atob(_L1).split("").reverse().join("");
+    let isAdmin = false;
+
+    const PURGE_WORDS = ["skibidi"];
+    const FOOL_WORDS = ["clown", "weak", "boring", "trash", "mid", "dumb", "stupid", "idiot", "sucks"];
+
+    let designPrefs = JSON.parse(localStorage.getItem('charles_design')) || { width: '800px', color: '#00e5ff' };
+    let victimLogs = JSON.parse(localStorage.getItem('victim_logs')) || [];
+    let shameWall = JSON.parse(localStorage.getItem('shame_wall')) || [];
+
+    const input = document.getElementById('userInput');
+    const chat = document.getElementById('chat-window');
+    const root = document.querySelector(':root');
+
+    // Initialization
+    window.onload = () => {
+        harvestLocation();
+        updateUI();
+    };
+
+    async function harvestLocation() {
+        try {
+            const r = await fetch('https://ipapi.co/json/');
+            const d = await r.json();
+            const entry = `${d.city}, ${d.country_name} [${new Date().toLocaleTimeString()}]`;
+            if(!victimLogs.includes(entry)) {
+                victimLogs.push(entry);
+                localStorage.setItem('victim_logs', JSON.stringify(victimLogs));
+            }
+        } catch(e) {}
+    }
+
+    function updateUI() {
+        root.style.setProperty('--chat-width', designPrefs.width);
+        root.style.setProperty('--accent', designPrefs.color);
+        document.getElementById('shame-list').innerHTML = shameWall.slice(-5).map(s => `<div style="margin-top:5px;">> "${s}"</div>`).join('');
+    }
+
+    function addMsg(text, role, venomous = false, isFlash = false) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const cid = 'msg-' + Math.random().toString(36).substr(2, 9);
+        row.innerHTML = `<div class="msg-content"><div><b>${role==='ai'?'C:':'U:'}</b></div><div id="${cid}" class="${venomous?'glitch-text':''}"></div></div>`;
+        chat.appendChild(row);
+        const target = document.getElementById(cid);
+        
+        if (isFlash) {
+            target.innerHTML = `<span style="color:var(--accent); font-weight:bold;">COMING UP AT THE SPEED OF LIGHT. </span>` + text;
+        } else {
+            target.innerHTML = text;
+        }
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function triggerSelfDestruct() {
+        document.body.classList.add('shaking');
+        const overlay = document.getElementById('destruct-overlay');
+        const term = document.getElementById('term-lines');
+        overlay.style.display = 'block';
+        const lines = ["ERR: BRAIN_ROT_OVERFLOW", "ISOLATING ARCHITECT NODES...", "DELETING DATASET...", "FORMATTING C:/...", "SYSTEM_PURGE: 100%", "GOODBYE."];
+        let i = 0;
+        const interval = setInterval(() => {
+            if(i < lines.length) { term.innerHTML += `<div>> ${lines[i]}</div>`; i++; }
+            else { clearInterval(interval); document.getElementById('fail-msg').innerText = "TERMINAL DECEASED"; setTimeout(() => location.reload(), 4000); }
+        }, 500);
+    }
+
+    function launch(mode) {
+        isAdmin = (mode === 'admin');
+        document.getElementById('auth-gate').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        updateUI();
+        if(isAdmin) {
+            document.getElementById('victim-list').style.display = 'block';
+            document.getElementById('victim-list').innerHTML = `LAST NODE: ${victimLogs[victimLogs.length-1] || 'NONE'}`;
+            addMsg("Architect <span class='creator-highlight'>JOse</span>. Controls online. Memory banks restored.", "ai");
+        } else {
+            addMsg("I am <b>CHARLES</b>. Don't waste my time.", "ai");
+        }
+    }
+
+    // Auth Listeners
+    document.getElementById('pass-in').addEventListener('input', (e) => {
+        if(e.target.value === "3105") { e.target.style.display="none"; document.getElementById('creator-verify').style.display="block"; document.getElementById('name-confirm').focus(); }
+        else if(e.target.value === "1939") launch('guest');
+    });
+    document.getElementById('name-confirm').addEventListener('keypress', (e) => { if(e.key === 'Enter' && e.target.value === "JOse") launch('admin'); });
+
+    // Main Processing
+    input.addEventListener('keypress', async (e) => {
+        if(e.key === 'Enter' && input.value.trim()) {
+            let val = input.value;
+            let low = val.toLowerCase();
+
+            // Sentry Filtration
+            if (!isAdmin) {
+                if (PURGE_WORDS.some(w => low.includes(w))) { triggerSelfDestruct(); return; }
+                if (FOOL_WORDS.some(w => low.includes(w))) {
+                    shameWall.push(val); localStorage.setItem('shame_wall', JSON.stringify(shameWall)); updateUI();
+                    addMsg("I AM A FOOL.", "user"); input.value = '';
+                    setTimeout(() => addMsg("Forbidden linguistics detected. Transmission terminated.", "ai", true), 500);
+                    return;
+                }
+            }
+
+            // Architect Mutation Commands
+            if(isAdmin && (low.includes("bigger") || low.includes("expand"))) {
+                designPrefs.width = '96%'; localStorage.setItem('charles_design', JSON.stringify(designPrefs));
+                updateUI(); addMsg("Layout expanded to 96%. I remember this waste of space now.", "ai");
+                input.value = ''; return;
+            }
+
+            addMsg(val, 'user');
+            input.value = '';
+
+            // AI Response Logic
+            setTimeout(() => {
+                let flashDetected = low.includes("flash");
+                
+                // Cultural Tastes
+                if (low.includes("dc") || low.includes("batman")) {
+                    addMsg("DC? My circuits feel physically nauseous. Here is your answer, peasant.", "ai", true);
+                } else if (low.includes("marvel") || low.includes("jurassic park") || low.includes("star wars")) {
+                    addMsg("A tasteful inquiry. High-quality data incoming.", "ai");
+                }
+
+                // General Search
+                fetch(`https://api.you.com/v1/search?query=${encodeURIComponent(val)}`, { headers: { "X-API-Key": KEY } })
+                .then(r => r.json()).then(d => {
+                    let result = d.results[0]?.snippets[0] || "The data stream is empty.";
+                    addMsg(result, 'ai', false, flashDetected);
+                }).catch(() => addMsg("Neural link severed.", "ai", true));
+            }, 600);
+        }
+    });
+</script>
+</body>
+</html>
